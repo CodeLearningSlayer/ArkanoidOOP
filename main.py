@@ -13,7 +13,7 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GRAY = (125, 125, 125)
 LIGHT_BLUE = (64, 128, 255)
-fps = 300 # изменить потом обратно
+fps = 100 # изменить потом обратно
 GREEN = (0, 200, 64)
 YELLOW = (225, 225, 0)
 PINK = (230, 50, 230)
@@ -43,14 +43,16 @@ class Ball:
         global GAME
         pg.draw.circle(self.gamefield, RED, self.id.center, self.radius)
         key = pg.key.get_pressed()
-        if key[pg.K_SPACE]:
+        # print(self.radius, self.id.centerx)
+        if key[pg.K_SPACE] and GAME == 0:
             self.state = active
             GAME = 1
-            self.dx = -1
+            self.dx = 0
             self.dy = -1
-        if self.id.centerx < self.radius or WIDTH - self.id.centerx < self.radius:
+        if self.id.centerx < self.radius or WIDTH - self.id.centerx <= self.radius:
             self.dx = -self.dx
-        if self.id.centery < self.radius:
+            print('must')
+        if self.id.centery <= self.radius:
             self.dy = -self.dy
         if self.state != static or not pg.Rect.colliderect(self.id, obj.id):
             self.id.y += self.speed * self.dy
@@ -63,7 +65,7 @@ class Paddle:
     def __init__(self, gamefield, color):
         self.gamefield = gamefield
         self.color = color
-        self.width = 1024
+        self.width = 200
         self.speed = 15
         self.height = 25
         self.state = True
@@ -174,6 +176,22 @@ def collisioncheck(ball, brick):
     return ball.dx, ball.dy
 
 
+def paddleCollision(paddle, ball):
+    relative_offset = ball.id.right - paddle.id.left
+    middle = paddle.id.centerx - paddle.id.left
+    start = middle - 20
+    end = paddle.id.right - paddle.id.left
+    middle_end = middle + 20
+    # print(relative_offset, start, middle_end, end)
+    if relative_offset < start:
+        ball.dx = -1 * ((start//relative_offset) % 3)
+        print(ball.dx)
+    elif relative_offset > middle_end:
+        ball.dx = 1 * relative_offset//(end - middle_end) % 3
+        print(ball.dx)
+    elif start<relative_offset<middle_end:
+        ball.dx = -0.5 if (middle - ball.id.centerx) < 0 else 0.9
+    return ball.dx
 def BonusGeneration(list):
     bufrand = 0
     bonus_list = []
@@ -262,7 +280,7 @@ while gamemode:
                             bonus_sprites.append(bonus[i][j])
                         bricks[i][j] = 0
     for i in range(len(bonus_sprites)):
-        if bonus_sprites[i]:
+        if bonus_sprites[i]: #пофиксить вылет при отрисовке двух подряд летящих бонуса
             bonus_sprites[i].draw()
         if pg.Rect.colliderect(bonus_sprites[i].id, paddle.id):  # придумать тут таймер для бонусов
             if TypeOfBonus(bonus_sprites[i]) == "Ball":
@@ -277,6 +295,7 @@ while gamemode:
     paddle.draw()
     if pg.Rect.colliderect(ball.id, paddle.id):
         ball.dx, ball.dy = collisioncheck(ball, paddle)
+        ball.dx = paddleCollision(paddle, ball)
     if HEIGHT - ball.id.centery <= ball.radius:
         sc.blit(textsurface, (WIDTH // 2, HEIGHT // 2))
         pg.display.flip()

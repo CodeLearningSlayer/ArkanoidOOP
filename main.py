@@ -134,7 +134,7 @@ class Bonus:
         self.gamefield.blit(self.image, self.id)
         self.id.y += 1
 
-
+#для гита
 class SmallBall(Bonus):
     @staticmethod
     def modification(obj):

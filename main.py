@@ -44,14 +44,13 @@ class Ball:
         pg.draw.circle(self.gamefield, RED, self.id.center, self.radius)
         key = pg.key.get_pressed()
         # print(self.radius, self.id.centerx)
-        if key[pg.K_SPACE] and GAME == 0:
+        if key[pg.K_SPACE]:
             self.state = active
             GAME = 1
             self.dx = 0
             self.dy = -1
         if self.id.centerx < self.radius or WIDTH - self.id.centerx <= self.radius:
             self.dx = -self.dx
-            print('must')
         if self.id.centery <= self.radius:
             self.dy = -self.dy
         if self.state != static or not pg.Rect.colliderect(self.id, obj.id):
@@ -157,22 +156,26 @@ class StickyPaddle(Bonus):
 
 def collisioncheck(ball, brick):
     if ball.dx > 0:
-        offsetx = abs(ball.id.right - brick.id.left)
+        offsetx = ball.id.right - brick.id.left
     else:
-        offsetx = abs(ball.id.left - brick.id.right)
+        offsetx = brick.id.right - ball.id.left
     if ball.dy > 0:
-        offsety = abs(ball.id.bottom - brick.id.top)
+        offsety = ball.id.bottom - brick.id.top
     else:
-        offsety = abs(ball.id.top - brick.id.bottom)
-    if offsety > offsetx:
-        ball.dx = ball.dx
-        ball.dy = - ball.dy
-    else:
-        ball.dx = - ball.dx
-        ball.dy = ball.dy
-    if offsety - offsetx < 10:
+        offsety = brick.id.bottom - ball.id.top
+
+    if abs(offsety - offsetx) < 9:
         ball.dx = - ball.dx
         ball.dy = - ball.dy
+        print('угол')
+    elif offsety > offsetx:
+        ball.dx = - ball.dx
+        print('вниз-вверх')
+    elif offsetx > offsety:
+        ball.dy = - ball.dy
+        print('влево-вправо')
+    print(offsetx, offsety)
+
     return ball.dx, ball.dy
 
 
@@ -185,13 +188,13 @@ def paddleCollision(paddle, ball):
     # print(relative_offset, start, middle_end, end)
     if relative_offset < start:
         ball.dx = -1 * ((start//relative_offset) % 3)
-        print(ball.dx)
     elif relative_offset > middle_end:
         ball.dx = 1 * relative_offset//(end - middle_end) % 3
-        print(ball.dx)
-    elif start<relative_offset<middle_end:
+    elif start < relative_offset < middle_end:
         ball.dx = -0.5 if (middle - ball.id.centerx) < 0 else 0.9
     return ball.dx
+
+
 def BonusGeneration(list):
     bufrand = 0
     bonus_list = []
@@ -279,17 +282,23 @@ while gamemode:
                         if bonus[i][j]:
                             bonus_sprites.append(bonus[i][j])
                         bricks[i][j] = 0
-    for i in range(len(bonus_sprites)):
-        if bonus_sprites[i]: #пофиксить вылет при отрисовке двух подряд летящих бонуса
-            bonus_sprites[i].draw()
-        if pg.Rect.colliderect(bonus_sprites[i].id, paddle.id):  # придумать тут таймер для бонусов
-            if TypeOfBonus(bonus_sprites[i]) == "Ball":
-                print("ball was given")
-                bonus_sprites[i].modification(ball)
-            else:
-                print("paddle was given")
-                bonus_sprites[i].modification(paddle)
-            bonus_sprites.pop(i)
+    # print(bonus_sprites)
+    if len(bonus_sprites)!=0:
+        for i in range(len(bonus_sprites)):
+            if bonus_sprites[i]: #пофиксить вылет при отрисовке двух подряд летящих бонуса
+                bonus_sprites[i].draw()
+            if bonus_sprites[i].id.y >= HEIGHT:
+                bonus_sprites.pop(i)
+                break
+            if pg.Rect.colliderect(bonus_sprites[i].id, paddle.id):  # придумать тут таймер для бонусов
+                if TypeOfBonus(bonus_sprites[i]) == "Ball":
+                    print("ball was given")
+                    bonus_sprites[i].modification(ball)
+                else:
+                    print("paddle was given")
+                    bonus_sprites[i].modification(paddle)
+                bonus_sprites.pop(i)
+
     if HEIGHT - ball.id.centery > ball.radius:
         ball.draw(paddle)
     paddle.draw()

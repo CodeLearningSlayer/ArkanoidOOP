@@ -26,26 +26,61 @@ myfont = pygame.font.SysFont('Comic Sans MS', 60)
 textsurface = myfont.render('GAME OVER', False, (255, 255, 255))
 active = 1
 static = 0
+stick = 0
+
+
+class GeometryValues:
+
+    def __set_name__(self, owner, name):
+        self.__name = name
+
+    def __get__(self, instance, owner):
+        return instance.__dict__[self.__name]
+
+    def __set__(self, instance, value):
+        instance.__dict__[self.__name] = value
+
 
 class Ball:
+    dx = GeometryValues()
+    dy = GeometryValues()
+    radius = GeometryValues()
     def __init__(self, gamefield, color, obj):
-        self.gamefield = gamefield
-        self.color = color
+        self.__gamefield = gamefield
+        self.__color = color
         self.radius = 15
-        self.rect = int(self.radius * sqrt(2))
-        self.id = pg.Rect(obj.id.centerx, obj.id.top - self.rect - 4, self.rect, self.rect)
-        self.speed = 3
+        self.__rect = int(self.radius * sqrt(2))
+        self.id = pg.Rect(obj.id.centerx, obj.id.top - self.__rect - 4, self.__rect, self.__rect)
+        self.__speed = 3
         self.dx = 0
         self.dy = 0
-        self.state = static
+        self.__state = static
+        self.__offset = 0
+
+    @property
+    def state(self):
+        return self.__state
+
+    @state.setter
+    def state(self, state):
+        self.__state = state
+
+    def set_offset(self, value):
+        if self.__state == active:
+            self.__offset = value
+        elif self.__offset == 0:
+            self.__offset = value
+
+    def get_offset(self):
+        return self.__offset
 
     def draw(self, obj):
         global GAME
-        pg.draw.circle(self.gamefield, RED, self.id.center, self.radius)
+        pg.draw.circle(self.__gamefield, RED, self.id.center, self.radius)
         key = pg.key.get_pressed()
-        # print(self.radius, self.id.centerx)
         if key[pg.K_SPACE]:
-            self.state = active
+            self.__state = active
+
             GAME = 1
             self.dx = 0
             self.dy = -1
@@ -53,45 +88,69 @@ class Ball:
             self.dx = -self.dx
         if self.id.centery <= self.radius:
             self.dy = -self.dy
-        if self.state != static or not pg.Rect.colliderect(self.id, obj.id):
-            self.id.y += self.speed * self.dy
-            self.id.x += self.speed * self.dx
-        elif GAME == 0:
+        if self.__state != static or not pg.Rect.colliderect(self.id, obj.id):
+            self.id.y += self.__speed * self.dy
+            self.id.x += self.__speed * self.dx
+            self.set_offset(0)
+        else:
+            self.set_offset(self.id.right - obj.id.left)
+            self.drawSticky(obj)
+
+        if GAME == 0:
             self.id.x = obj.id.centerx
+
+    def drawSticky(self, obj):
+        self.dx = 0
+        self.dy = 0
+        self.id.x = obj.id.x + self.get_offset()
+
+
 
 
 class Paddle:
     def __init__(self, gamefield, color):
-        self.gamefield = gamefield
-        self.color = color
-        self.width = 200
-        self.speed = 15
-        self.height = 25
-        self.state = True
-        self.id = pg.Rect(WIDTH // 2 - self.width // 2, HEIGHT - self.height * 2, self.width, self.height)
+        self.__gamefield = gamefield
+        self.__color = color
+        self.width = 200  # setter
+        self.__speed = 10
+        self.__height = 25
+        self.id = pg.Rect(WIDTH // 2 - self.__width // 2, HEIGHT - self.__height * 2, self.__width, self.__height) # подумать
 
     def draw(self):
-        pg.draw.rect(self.gamefield, pygame.Color('darkorange'), self.id)
+        pg.draw.rect(self.__gamefield, pygame.Color('darkorange'), self.id)
         key = pg.key.get_pressed()
         if key[pg.K_LEFT] and self.id.left > 0:
-            self.id.left -= self.speed
+            self.id.left -= self.__speed
         if key[pg.K_RIGHT] and self.id.right < WIDTH:
-            self.id.right += self.speed
+            self.id.right += self.__speed
 
+
+    def setwidth(self, width):
+        self.__width = width
+
+    width = property(fset=setwidth)
 
 class Brick:
     Width = 80
     Height = 30
 
     def __init__(self, gamefield, color, x, y):
-        self.gamefield = gamefield
-        self.x = x
-        self.y = y
-        self.color = color
-        self.id = pg.Rect(self.x, self.y, Brick.Width, Brick.Height)
+        self.__gamefield = gamefield
+        self.__x = x
+        self.__y = y
+        self.__color = color
+        self.id = pg.Rect(self.__x, self.__y, Brick.Width, Brick.Height)
 
     def draw(self):
-        pg.draw.rect(self.gamefield, self.color, self.id)
+        pg.draw.rect(self.__gamefield, self.__color, self.id)
+
+    @property
+    def color(self):
+        return self.__color
+
+    @color.setter
+    def color(self, color):
+        self.__color = color
 
 
 class WeakBrick(Brick):
@@ -117,30 +176,30 @@ class UnbreakableBrick(Brick):
 
 
 class Bonus:
-    sidelength = 30
 
     def __init__(self, gamefield, x, y):
-        self.gamefield = gamefield
-        self.x = x
-        self.y = y
-        self.path = (f"sprites/{self.__class__.__name__}.jpg")
-        self.image = pg.image.load(self.path).convert_alpha()
-        self.image = pg.transform.scale(self.image, (40, 40))
-        self.id = self.image.get_rect()
-        self.id.x = self.x
-        self.id.y = self.y
+        self.__gamefield = gamefield
+        self.__x = x
+        self.__y = y
+        self.__path = (f"sprites/{self.__class__.__name__}.jpg")
+        self.__image = pg.image.load(self.__path).convert_alpha()
+        self.__image = pg.transform.scale(self.__image, (40, 40))
+        self.id = self.__image.get_rect()
+        self.id.x = self.__x
+        self.id.y = self.__y
 
     def draw(self):
-        self.gamefield.blit(self.image, self.id)
+        self.__gamefield.blit(self.__image, self.id)
         self.id.y += 1
 
-#для гита
+
 class SmallBall(Bonus):
     @staticmethod
     def modification(obj):
         obj.id.width = 10
         obj.id.height = 10
         obj.radius = 10
+
 
 class SmallPaddle(Bonus):
     @staticmethod
@@ -170,11 +229,8 @@ def collisioncheck(ball, brick):
         print('угол')
     elif offsety > offsetx:
         ball.dx = - ball.dx
-        print('вниз-вверх')
     elif offsetx > offsety:
         ball.dy = - ball.dy
-        print('влево-вправо')
-    print(offsetx, offsety)
 
     return ball.dx, ball.dy
 
@@ -185,9 +241,8 @@ def paddleCollision(paddle, ball):
     start = middle - 20
     end = paddle.id.right - paddle.id.left
     middle_end = middle + 20
-    # print(relative_offset, start, middle_end, end)
     if relative_offset < start:
-        ball.dx = -1 * ((start//relative_offset) % 3)
+        ball.dx = -1 * ((start//relative_offset) % 3) if start//relative_offset < 3 else -1 * 2
     elif relative_offset > middle_end:
         ball.dx = 1 * relative_offset//(end - middle_end) % 3
     elif start < relative_offset < middle_end:
@@ -196,7 +251,6 @@ def paddleCollision(paddle, ball):
 
 
 def BonusGeneration(list):
-    bufrand = 0
     bonus_list = []
     for i in range(3):
         buflist = [None] * 12
@@ -223,6 +277,7 @@ def BonusGeneration(list):
                         buflist[j] = StickyPaddle(sc, list[i][j].id.centerx, list[i][j].id.centery)
         bonus_list.append(buflist)
     return bonus_list
+
 
 def TypeOfBonus(obj):
     if isinstance(obj, SmallBall) or isinstance(obj, StickyPaddle) :
@@ -283,9 +338,10 @@ while gamemode:
                             bonus_sprites.append(bonus[i][j])
                         bricks[i][j] = 0
     # print(bonus_sprites)
-    if len(bonus_sprites)!=0:
+    if len(bonus_sprites) != 0:
         for i in range(len(bonus_sprites)):
-            if bonus_sprites[i]: #пофиксить вылет при отрисовке двух подряд летящих бонуса
+            print(bonus_sprites)
+            if bonus_sprites[i]:
                 bonus_sprites[i].draw()
             if bonus_sprites[i].id.y >= HEIGHT:
                 bonus_sprites.pop(i)
@@ -294,10 +350,13 @@ while gamemode:
                 if TypeOfBonus(bonus_sprites[i]) == "Ball":
                     print("ball was given")
                     bonus_sprites[i].modification(ball)
+                    bonus_sprites.pop(i)
+                    break
                 else:
                     print("paddle was given")
                     bonus_sprites[i].modification(paddle)
-                bonus_sprites.pop(i)
+                    bonus_sprites.pop(i)
+                    break
 
     if HEIGHT - ball.id.centery > ball.radius:
         ball.draw(paddle)

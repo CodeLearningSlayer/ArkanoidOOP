@@ -29,7 +29,7 @@ static = 0
 stick = 0
 
 
-class GeometryValues:
+class GetId:
 
     def __set_name__(self, owner, name):
         self.__name = name
@@ -37,33 +37,26 @@ class GeometryValues:
     def __get__(self, instance, owner):
         return instance.__dict__[self.__name]
 
-    def __set__(self, instance, value):
-        instance.__dict__[self.__name] = value
-
 
 class Ball:
-    dx = GeometryValues()
-    dy = GeometryValues()
-    radius = GeometryValues()
+    # dx = GeometryValues()
+    # dy = GeometryValues()
+    # radius = GeometryValues()
     def __init__(self, gamefield, color, obj):
         self.__gamefield = gamefield
         self.__color = color
         self.radius = 15
         self.__rect = int(self.radius * sqrt(2))
-        self.id = pg.Rect(obj.id.centerx, obj.id.top - self.__rect - 4, self.__rect, self.__rect)
+        self.__id = pg.Rect(obj.id.centerx, obj.id.top - self.__rect - 4, self.__rect, self.__rect)
         self.__speed = 3
-        self.dx = 0
-        self.dy = 0
+        self.__dx = 0
+        self.__dy = 0
         self.__state = static
         self.__offset = 0
 
-    @property
-    def state(self):
-        return self.__state
-
-    @state.setter
     def state(self, state):
         self.__state = state
+
 
     def set_offset(self, value):
         if self.__state == active:
@@ -76,36 +69,69 @@ class Ball:
 
     def draw(self, obj):
         global GAME
-        pg.draw.circle(self.__gamefield, RED, self.id.center, self.radius)
+        pg.draw.circle(self.__gamefield, RED, self.__id.center, self.radius)
         key = pg.key.get_pressed()
         if key[pg.K_SPACE]:
             self.__state = active
 
             GAME = 1
-            self.dx = 0
-            self.dy = -1
-        if self.id.centerx < self.radius or WIDTH - self.id.centerx <= self.radius:
-            self.dx = -self.dx
-        if self.id.centery <= self.radius:
-            self.dy = -self.dy
-        if self.__state != static or not pg.Rect.colliderect(self.id, obj.id):
-            self.id.y += self.__speed * self.dy
-            self.id.x += self.__speed * self.dx
+            self.__dx = 0
+            self.__dy = -1
+        if self.__id.centerx < self.radius or WIDTH - self.__id.centerx <= self.radius:
+            self.__dx = -self.__dx
+        if self.__id.centery <= self.radius:
+            self.__dy = -self.__dy
+        if self.__state != static or not pg.Rect.colliderect(self.__id, obj.id):
+            self.__id.y += self.__speed * self.__dy
+            self.__id.x += self.__speed * self.__dx
             self.set_offset(0)
         else:
-            self.set_offset(self.id.right - obj.id.left)
+            self.set_offset(self.__id.right - obj.id.left)
             self.drawSticky(obj)
 
         if GAME == 0:
-            self.id.x = obj.id.centerx
+            self.__id.x = obj.id.centerx
 
     def drawSticky(self, obj):
-        self.dx = 0
-        self.dy = 0
-        self.id.x = obj.id.x + self.get_offset()
+        self.__dx = 0
+        self.__dy = 0
+        self.__id.x = obj.id.x + self.get_offset()
 
+    def collisioncheck(self, brick):
+        if self.__dx > 0:
+            offsetx = self.__id.right - brick.id.left
+        else:
+            offsetx = brick.id.right - self.__id.left
+        if self.__dy > 0:
+            offsety = self.__id.bottom - brick.id.top
+        else:
+            offsety = brick.id.bottom - self.__id.top
 
+        if abs(offsety - offsetx) < 9:
+            self.__dx = - self.__dx
+            self.__dy = - self.__dy
+            print('угол')
+        elif offsety > offsetx:
+            self.__dx = - self.__dx
+        elif offsetx > offsety:
+            self.__dy = - self.__dy
 
+    def paddleCollision(self, paddle):
+        relative_offset = self.__id.right - paddle.id.left
+        middle = paddle.id.centerx - paddle.id.left
+        start = middle - 20
+        end = paddle.id.right - paddle.id.left
+        middle_end = middle + 20
+        if relative_offset < start:
+            self.__dx = -1 * ((start // relative_offset) % 3) if start // relative_offset < 3 else -1 * 2
+        elif relative_offset > middle_end:
+            self.__dx = 1 * relative_offset // (end - middle_end) % 3
+        elif start < relative_offset < middle_end:
+            self.__dx = -0.5 if (middle - self.__id.centerx) < 0 else 0.9
+
+    @property
+    def id(self):
+        return self.__id
 
 class Paddle:
     def __init__(self, gamefield, color):
@@ -114,16 +140,19 @@ class Paddle:
         self.width = 200  # setter
         self.__speed = 10
         self.__height = 25
-        self.id = pg.Rect(WIDTH // 2 - self.__width // 2, HEIGHT - self.__height * 2, self.__width, self.__height) # подумать
+        self.__id = pg.Rect(WIDTH // 2 - self.__width // 2, HEIGHT - self.__height * 2, self.__width, self.__height) # подумать
 
     def draw(self):
-        pg.draw.rect(self.__gamefield, pygame.Color('darkorange'), self.id)
+        pg.draw.rect(self.__gamefield, pygame.Color('darkorange'), self.__id)
         key = pg.key.get_pressed()
-        if key[pg.K_LEFT] and self.id.left > 0:
-            self.id.left -= self.__speed
-        if key[pg.K_RIGHT] and self.id.right < WIDTH:
-            self.id.right += self.__speed
+        if key[pg.K_LEFT] and self.__id.left > 0:
+            self.__id.left -= self.__speed
+        if key[pg.K_RIGHT] and self.__id.right < WIDTH:
+            self.__id.right += self.__speed
 
+    @property
+    def id(self):
+        return self.__id
 
     def setwidth(self, width):
         self.__width = width
@@ -139,19 +168,22 @@ class Brick:
         self.__x = x
         self.__y = y
         self.__color = color
-        self.id = pg.Rect(self.__x, self.__y, Brick.Width, Brick.Height)
+        self.__id = pg.Rect(self.__x, self.__y, Brick.Width, Brick.Height)
 
     def draw(self):
-        pg.draw.rect(self.__gamefield, self.__color, self.id)
+        pg.draw.rect(self.__gamefield, self.__color, self.__id)
 
     @property
-    def color(self):
-        return self.__color
+    def id(self):
+        return self.__id
 
-    @color.setter
-    def color(self, color):
-        self.__color = color
-
+    def setcolor(self):
+        if self.hits == 1:
+            self.__color = LIGHT_BLUE
+        elif self.hits == 2:
+            self.__color = GREEN
+        elif self.hits == 3:
+            self.__color = RED
 
 class WeakBrick(Brick):
     Color = LIGHT_BLUE
@@ -184,14 +216,17 @@ class Bonus:
         self.__path = (f"sprites/{self.__class__.__name__}.jpg")
         self.__image = pg.image.load(self.__path).convert_alpha()
         self.__image = pg.transform.scale(self.__image, (40, 40))
-        self.id = self.__image.get_rect()
-        self.id.x = self.__x
-        self.id.y = self.__y
+        self.__id = self.__image.get_rect()
+        self.__id.x = self.__x
+        self.__id.y = self.__y
 
     def draw(self):
-        self.__gamefield.blit(self.__image, self.id)
-        self.id.y += 1
+        self.__gamefield.blit(self.__image, self.__id)
+        self.__id.y += 1
 
+    @property
+    def id(self):
+        return self.__id
 
 class SmallBall(Bonus):
     @staticmethod
@@ -213,41 +248,10 @@ class StickyPaddle(Bonus):
         obj.state = static
 
 
-def collisioncheck(ball, brick):
-    if ball.dx > 0:
-        offsetx = ball.id.right - brick.id.left
-    else:
-        offsetx = brick.id.right - ball.id.left
-    if ball.dy > 0:
-        offsety = ball.id.bottom - brick.id.top
-    else:
-        offsety = brick.id.bottom - ball.id.top
-
-    if abs(offsety - offsetx) < 9:
-        ball.dx = - ball.dx
-        ball.dy = - ball.dy
-        print('угол')
-    elif offsety > offsetx:
-        ball.dx = - ball.dx
-    elif offsetx > offsety:
-        ball.dy = - ball.dy
-
-    return ball.dx, ball.dy
 
 
-def paddleCollision(paddle, ball):
-    relative_offset = ball.id.right - paddle.id.left
-    middle = paddle.id.centerx - paddle.id.left
-    start = middle - 20
-    end = paddle.id.right - paddle.id.left
-    middle_end = middle + 20
-    if relative_offset < start:
-        ball.dx = -1 * ((start//relative_offset) % 3) if start//relative_offset < 3 else -1 * 2
-    elif relative_offset > middle_end:
-        ball.dx = 1 * relative_offset//(end - middle_end) % 3
-    elif start < relative_offset < middle_end:
-        ball.dx = -0.5 if (middle - ball.id.centerx) < 0 else 0.9
-    return ball.dx
+
+
 
 
 def BonusGeneration(list):
@@ -321,18 +325,17 @@ while gamemode:
         for j in range(1024 // 80):
             if isinstance(bricks[i][j], Brick):
                 bricks[i][j].draw()
+                bricks[i][j].setcolor()
                 if pg.Rect.colliderect(ball.id, bricks[i][
                     j].id):  # Первый вариант проверки удара, минус в том, что наезжает мячик. Аналог - по координатам проверка.
-                    ball.dx, ball.dy = collisioncheck(ball, bricks[i][j])
+                    ball.collisioncheck(bricks[i][j])
                     fps += 2
                     if bricks[i][j].hits == 3:
-
-                        bricks[i][j].color = GREEN
                         bricks[i][j].hits -= 1
+                        bricks[i][j].setcolor()
                     elif bricks[i][j].hits == 2:
-
-                        bricks[i][j].color = LIGHT_BLUE
                         bricks[i][j].hits -= 1
+                        bricks[i][j].setcolor()
                     else:
                         if bonus[i][j]:
                             bonus_sprites.append(bonus[i][j])
@@ -362,8 +365,8 @@ while gamemode:
         ball.draw(paddle)
     paddle.draw()
     if pg.Rect.colliderect(ball.id, paddle.id):
-        ball.dx, ball.dy = collisioncheck(ball, paddle)
-        ball.dx = paddleCollision(paddle, ball)
+        ball.collisioncheck(paddle)
+        ball.paddleCollision(paddle)
     if HEIGHT - ball.id.centery <= ball.radius:
         sc.blit(textsurface, (WIDTH // 2, HEIGHT // 2))
         pg.display.flip()

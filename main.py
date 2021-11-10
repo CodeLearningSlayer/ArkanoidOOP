@@ -57,7 +57,6 @@ class Ball:
     def state(self, state):
         self.__state = state
 
-
     def set_offset(self, value):
         if self.__state == active:
             self.__offset = value
@@ -71,9 +70,8 @@ class Ball:
         global GAME
         pg.draw.circle(self.__gamefield, RED, self.__id.center, self.radius)
         key = pg.key.get_pressed()
-        if key[pg.K_SPACE]:
+        if key[pg.K_SPACE] and self.__state == static:
             self.__state = active
-
             GAME = 1
             self.__dx = 0
             self.__dy = -1
@@ -159,6 +157,7 @@ class Paddle:
 
     width = property(fset=setwidth)
 
+
 class Brick:
     Width = 80
     Height = 30
@@ -184,6 +183,7 @@ class Brick:
             self.__color = GREEN
         elif self.hits == 3:
             self.__color = RED
+
 
 class WeakBrick(Brick):
     Color = LIGHT_BLUE
@@ -245,14 +245,7 @@ class SmallPaddle(Bonus):
 class StickyPaddle(Bonus):
     @staticmethod
     def modification(obj):
-        obj.state = static
-
-
-
-
-
-
-
+        obj.state(static)
 
 def BonusGeneration(list):
     bonus_list = []
@@ -293,7 +286,6 @@ def TypeOfBonus(obj):
 
 paddle = Paddle(sc, PINK)
 ball = Ball(sc, RED, paddle)
-rand__ranges = [10, 30, 60]
 bricks_weight = [[random.randint(0, 100) for j in range(WIDTH // Brick.Width)] for i in range(3)]
 bricks = []
 bufrand = 0
@@ -326,8 +318,7 @@ while gamemode:
             if isinstance(bricks[i][j], Brick):
                 bricks[i][j].draw()
                 bricks[i][j].setcolor()
-                if pg.Rect.colliderect(ball.id, bricks[i][
-                    j].id):  # Первый вариант проверки удара, минус в том, что наезжает мячик. Аналог - по координатам проверка.
+                if pg.Rect.colliderect(ball.id, bricks[i][j].id):
                     ball.collisioncheck(bricks[i][j])
                     fps += 2
                     if bricks[i][j].hits == 3:

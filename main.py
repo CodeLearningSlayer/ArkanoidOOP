@@ -13,7 +13,7 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GRAY = (125, 125, 125)
 LIGHT_BLUE = (64, 128, 255)
-fps = 100 # изменить потом обратно
+fps = 100  # изменить потом обратно
 GREEN = (0, 200, 64)
 YELLOW = (225, 225, 0)
 PINK = (230, 50, 230)
@@ -24,6 +24,8 @@ pg.font.init()
 all_sprites = pg.sprite.Group()
 myfont = pygame.font.SysFont('Comic Sans MS', 60)
 textsurface = myfont.render('GAME OVER', False, (255, 255, 255))
+score_font = pygame.font.Font('2015 Cruiser Bold.otf', 50)
+gamescore = 0
 active = 1
 static = 0
 stick = 0
@@ -45,7 +47,7 @@ class Ball:
     def __init__(self, gamefield, color, obj):
         self.__gamefield = gamefield
         self.__color = color
-        self.radius = 15
+        self.radius = 13
         self.__rect = int(self.radius * sqrt(2))
         self.__id = pg.Rect(obj.id.centerx, obj.id.top - self.__rect - 4, self.__rect, self.__rect)
         self.__speed = 3
@@ -77,6 +79,8 @@ class Ball:
             self.__dy = -1
         if self.__id.centerx < self.radius or WIDTH - self.__id.centerx <= self.radius:
             self.__dx = -self.__dx
+            if self.__id.centerx < self.radius:
+                self.__id.centerx = self.radius
         if self.__id.centery <= self.radius:
             self.__dy = -self.__dy
         if self.__state != static or not pg.Rect.colliderect(self.__id, obj.id):
@@ -207,6 +211,20 @@ class UnbreakableBrick(Brick):
     pass
 
 
+class Life:
+    def __init__(self, gamefield):
+        self.__path = ('sprites/life.png')
+        self.__image = pg.image.load(self.__path).convert_alpha()
+        self.__image = pg.transform.scale(self.__image, (50, 50))
+        self.__id = self.__image.get_rect()
+        self.__gamefield = gamefield
+    def draw(self, coordx):
+        self.__gamefield.blit(self.__image, (coordx + 870, 15))
+
+    @property
+    def id(self):
+        return self.__id
+
 class Bonus:
 
     def __init__(self, gamefield, x, y):
@@ -246,6 +264,7 @@ class StickyPaddle(Bonus):
     @staticmethod
     def modification(obj):
         obj.state(static)
+
 
 def BonusGeneration(list):
     bonus_list = []
@@ -296,25 +315,28 @@ for i in range(3):
     deltay += 2
     for j in range(1024 // 80):
         if bricks_weight[i][j] < 10:
-            bufmas.append(StrongBrick(sc, StrongBrick.Color, Brick.Width * j + deltax, i * Brick.Height + deltay))
+            bufmas.append(StrongBrick(sc, StrongBrick.Color, Brick.Width * j + deltax , i * Brick.Height + deltay + 80))
         elif bricks_weight[i][j] < 30:
-            bufmas.append(MediumBrick(sc, MediumBrick.Color, Brick.Width * j + deltax, i * Brick.Height + deltay))
+            bufmas.append(MediumBrick(sc, MediumBrick.Color, Brick.Width * j + deltax , i * Brick.Height + deltay + 80))
         else:
-            bufmas.append(WeakBrick(sc, WeakBrick.Color, Brick.Width * j + deltax, i * Brick.Height + deltay))
+            bufmas.append(WeakBrick(sc, WeakBrick.Color, Brick.Width * j + deltax, i * Brick.Height + deltay + 80))
         deltax += 5
     bricks.append(bufmas)
 bonus = BonusGeneration(bricks)
 bonusfall = 0
 bonus_sprites = []
-print(bonus)
 pg.display.flip()
+life = [Life(sc) for i in range(3)]
 while gamemode:
     for event in pg.event.get():
         if event.type == pg.QUIT:
             gamemode = False
     sc.blit(bg, (0, 0))
+    score = score_font.render(f'SCORE: {gamescore}', True, (124,252,0))
     for i in range(3):
         for j in range(1024 // 80):
+            if len(life) > 0:
+                life[j % len(life)].draw(life[j % len(life)].id.width * (j%len(life)))
             if isinstance(bricks[i][j], Brick):
                 bricks[i][j].draw()
                 bricks[i][j].setcolor()
@@ -331,6 +353,7 @@ while gamemode:
                         if bonus[i][j]:
                             bonus_sprites.append(bonus[i][j])
                         bricks[i][j] = 0
+                        gamescore += 50
     # print(bonus_sprites)
     if len(bonus_sprites) != 0:
         for i in range(len(bonus_sprites)):
@@ -355,13 +378,20 @@ while gamemode:
     if HEIGHT - ball.id.centery > ball.radius:
         ball.draw(paddle)
     paddle.draw()
+    sc.blit(score, (10, 8))
     if pg.Rect.colliderect(ball.id, paddle.id):
         ball.collisioncheck(paddle)
         ball.paddleCollision(paddle)
     if HEIGHT - ball.id.centery <= ball.radius:
-        sc.blit(textsurface, (WIDTH // 2, HEIGHT // 2))
-        pg.display.flip()
-        time.sleep(1)
-        quit()
+        life.pop()
+        del ball
+        if len(life) > 0:
+            ball = Ball(sc, RED, paddle)
+            GAME = 0
+        else:
+            sc.blit(textsurface, ((WIDTH // 2) - 150, HEIGHT // 2))
+            pg.display.flip()
+            time.sleep(1)
+            quit()
     pg.display.flip()
     clock.tick(fps)

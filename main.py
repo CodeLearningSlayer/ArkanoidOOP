@@ -1,4 +1,5 @@
 import pygame
+import os
 import pygame as pg
 from math import *
 import time
@@ -20,7 +21,7 @@ PINK = (230, 50, 230)
 clock = pg.time.Clock()
 sc = pg.display.set_mode((WIDTH, HEIGHT))
 bg = pg.image.load("bg.jpg")
-pg.font.init()
+pg.init()
 all_sprites = pg.sprite.Group()
 myfont = pygame.font.SysFont('Comic Sans MS', 60)
 textsurface = myfont.render('GAME OVER', False, (255, 255, 255))
@@ -30,6 +31,10 @@ active = 1
 static = 0
 stick = 0
 
+musicpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'music/music2.mp3')
+pg.mixer.music.load(musicpath)
+pg.mixer.music.play()
+pg.mixer.music.set_volume(0.1)
 
 class GetId:
 
@@ -55,6 +60,7 @@ class Ball:
         self.__dy = 0
         self.__state = static
         self.__offset = 0
+        self.__hit = ''
 
     def state(self, state):
         self.__state = state
@@ -64,6 +70,13 @@ class Ball:
             self.__offset = value
         elif self.__offset == 0:
             self.__offset = value
+
+    def hit(self):
+        sourceFileDir = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(sourceFileDir, 'sounds/hit.wav')
+        self.__hit = pg.mixer.Sound(path)
+        self.__hit.set_volume(0.1)
+        self.__hit.play()
 
     def get_offset(self):
         return self.__offset
@@ -89,12 +102,12 @@ class Ball:
             self.set_offset(0)
         else:
             self.set_offset(self.__id.right - obj.id.left)
-            self.drawSticky(obj)
+            self.__drawSticky(obj)
 
         if GAME == 0:
             self.__id.x = obj.id.centerx
 
-    def drawSticky(self, obj):
+    def __drawSticky(self, obj):
         self.__dx = 0
         self.__dy = 0
         self.__id.x = obj.id.x + self.get_offset()
@@ -324,6 +337,7 @@ for i in range(3):
     bricks.append(bufmas)
 bonus = BonusGeneration(bricks)
 bonusfall = 0
+print(bonus)
 bonus_sprites = []
 pg.display.flip()
 life = [Life(sc) for i in range(3)]
@@ -342,6 +356,7 @@ while gamemode:
                 bricks[i][j].setcolor()
                 if pg.Rect.colliderect(ball.id, bricks[i][j].id):
                     ball.collisioncheck(bricks[i][j])
+                    ball.hit()
                     fps += 2
                     if bricks[i][j].hits == 3:
                         bricks[i][j].hits -= 1
@@ -385,6 +400,7 @@ while gamemode:
     if HEIGHT - ball.id.centery <= ball.radius:
         life.pop()
         del ball
+        fps = 100
         if len(life) > 0:
             ball = Ball(sc, RED, paddle)
             GAME = 0

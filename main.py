@@ -25,7 +25,7 @@ pg.init()
 all_sprites = pg.sprite.Group()
 myfont = pygame.font.SysFont('Comic Sans MS', 60)
 textsurface = myfont.render('GAME OVER', False, (255, 255, 255))
-score_font = pygame.font.Font('2015 Cruiser Bold.otf', 50)
+score_font = pygame.font.Font('fonts/2015 Cruiser Bold.otf', 50)
 gamescore = 0
 active = 1
 static = 0
@@ -33,7 +33,7 @@ stick = 0
 
 musicpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'music/music2.mp3')
 pg.mixer.music.load(musicpath)
-pg.mixer.music.play()
+pg.mixer.music.play(-1, 0, 5000)
 pg.mixer.music.set_volume(0.1)
 
 class GetId:
@@ -83,7 +83,7 @@ class Ball:
 
     def draw(self, obj):
         global GAME
-        pg.draw.circle(self.__gamefield, RED, self.__id.center, self.radius)
+        pg.draw.circle(self.__gamefield, pg.Color('red1'), self.__id.center, self.radius)
         key = pg.key.get_pressed()
         if key[pg.K_SPACE] and self.__state == static:
             self.__state = active
@@ -112,6 +112,19 @@ class Ball:
         self.__dy = 0
         self.__id.x = obj.id.x + self.get_offset()
 
+    def paddleCollision(self, paddle):
+        relative_offset = self.__id.right - paddle.id.left
+        middle = paddle.id.centerx - paddle.id.left
+        start = middle - 20
+        end = paddle.id.right - paddle.id.left
+        middle_end = middle + 20
+        if relative_offset < start:
+            self.__dx = -1 * ((start // relative_offset) % 3) if start // relative_offset < 3 else -1 * 2
+        elif relative_offset > middle_end:
+            self.__dx = 1 * relative_offset // (end - middle_end) % 3
+        elif start < relative_offset < middle_end:
+            self.__dx = -0.5 if (middle - self.__id.centerx) < 0 else 0.9
+
     def collisioncheck(self, brick):
         if self.__dx > 0:
             offsetx = self.__id.right - brick.id.left
@@ -130,19 +143,6 @@ class Ball:
             self.__dx = - self.__dx
         elif offsetx > offsety:
             self.__dy = - self.__dy
-
-    def paddleCollision(self, paddle):
-        relative_offset = self.__id.right - paddle.id.left
-        middle = paddle.id.centerx - paddle.id.left
-        start = middle - 20
-        end = paddle.id.right - paddle.id.left
-        middle_end = middle + 20
-        if relative_offset < start:
-            self.__dx = -1 * ((start // relative_offset) % 3) if start // relative_offset < 3 else -1 * 2
-        elif relative_offset > middle_end:
-            self.__dx = 1 * relative_offset // (end - middle_end) % 3
-        elif start < relative_offset < middle_end:
-            self.__dx = -0.5 if (middle - self.__id.centerx) < 0 else 0.9
 
     @property
     def id(self):
@@ -317,7 +317,7 @@ def TypeOfBonus(obj):
 
 
 paddle = Paddle(sc, PINK)
-ball = Ball(sc, RED, paddle)
+ball = Ball(sc, pg.Color('mistyrose3'), paddle)
 bricks_weight = [[random.randint(0, 100) for j in range(WIDTH // Brick.Width)] for i in range(3)]
 bricks = []
 bufrand = 0

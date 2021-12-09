@@ -38,3 +38,12 @@ brick_color = (255, 255, 255)
 
 life_pic_filename = ('sprites/life.png')
 life_x=[870, 920, 970]
+
+small_paddle_path = "sprites/SmallPaddle.jpg"
+small_paddle_img = pg.image.load(small_paddle_path)
+small_paddle_img = pg.transform.scale(small_paddle_img, (40,40))
+small_paddle_rect = small_paddle_img.get_rect()
+
+bonus_width = 40
+bonus_height = 40
+bonus_speed = 3

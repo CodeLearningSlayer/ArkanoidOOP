@@ -7,7 +7,7 @@ from Brick import StrongBrick, MediumBrick, WeakBrick, Brick
 from Text_object import TextObject
 import config as c
 from Life import Life
-import sys
+from Bonus import SmallPaddle, StickyPaddle, SmallBall, Bonus
 import random
 
 
@@ -21,8 +21,9 @@ class Breakout(Game):
         self.paddle = None
         self.ball = None
         self.width = width
+        self.bonuses = None
         self.height = height
-        self.points =0
+        self.points = 0
         self.bricks = None
         self.score = None
         self.create_objects()
@@ -62,6 +63,7 @@ class Breakout(Game):
                 elif bricks_weight[i][j] < 30:
                     brick = MediumBrick(c.brick_width * j + deltax, i * c.brick_height + deltay + 80,
                                         c.brick_width, c.brick_height, MediumBrick.color)
+                    bufmas.append(brick)
                     self.objects.append(brick)
                 else:
                     brick = WeakBrick(c.brick_width * j + deltax, i * c.brick_height + deltay + 80,
@@ -70,7 +72,8 @@ class Breakout(Game):
                     self.objects.append(brick)
                 deltax += 5
             bricks.append(bufmas)
-            self.bricks = bricks
+        self.bricks = bricks
+        print(len(self.bricks[0]))
 
     def create_score(self):
         self.score = TextObject(c.score_x, c.score_y, c.score_text, c.score_color,
@@ -88,37 +91,28 @@ class Breakout(Game):
         self.create_paddle()
         self.create_ball()
         self.create_bricks()
+        self.generate_bonuses()
 
     def ball_physics(self):
         if self.ball.centerx < self.ball.radius or c.screen_width - self.ball.centerx <= self.ball.radius:
             self.ball.dx = -self.ball.dx
             if self.ball.centerx < self.ball.radius:
                 self.ball.bounds.centerx = self.ball.radius
+            if c.screen_width - self.ball.centerx < self.ball.radius:
+                self.ball.bounds.centerx = c.screen_width - self.ball.radius
         if self.ball.centery <= self.ball.radius:
             self.ball.dy = -self.ball.dy
 
     def collisioncheck(self):
-
-        def paddleCollision(obj):
-            relative_offset = self.ball.right - obj.left
-            middle = obj.centerx - obj.left
-            start = middle - 20
-            end = obj.right - obj.left
-            middle_end = middle + 20
-            if relative_offset < start:
-                self.ball.dx = -1 * ((start // relative_offset) % 3) if start // relative_offset < 3 else -1 * 2
-            elif relative_offset > middle_end:
-                self.ball.dx = 1 * relative_offset // (end - middle_end) % 3
-            elif start < relative_offset < middle_end:
-                self.ball.dx = -0.5 if (middle - self.ball.centerx) < 0 else 0.9
 
         def hit_the_brick(brick):
             brick.hits -= 1
             if brick.hits > 0:
                 brick.setcolor()
             else:
+                self.checkBonusInside(brick)
                 self.objects.remove(brick)
-                self.points+=50
+                self.points += 50
                 self.setscore()
 
         def changeDirection(obj):
@@ -138,6 +132,20 @@ class Breakout(Game):
                 self.ball.dx = - self.ball.dx
             elif offsetx > offsety:
                 self.ball.dy = - self.ball.dy
+
+        def paddleCollision(obj):
+            relative_offset = self.ball.right - obj.left
+            middle = obj.centerx - obj.left
+            start = middle - 20
+            end = obj.right - obj.left
+            middle_end = middle + 20
+            if relative_offset < start:
+                self.ball.dx = -1 * ((start // relative_offset) % 3) if start // relative_offset < 3 else -1 * 2
+            elif relative_offset > middle_end:
+                self.ball.dx = 1 * relative_offset // (end - middle_end) % 3
+            elif start < relative_offset < middle_end:
+                self.ball.dx = -0.5 if (middle - self.ball.centerx) < 0 else 0.9
+
         for obj in self.objects:
             if isinstance(obj, Brick):
                 if pg.Rect.colliderect(self.ball.bounds, obj.bounds):
@@ -147,6 +155,65 @@ class Breakout(Game):
                 if pg.Rect.colliderect(self.ball.bounds, obj.bounds):
                     changeDirection(obj)
                     paddleCollision(obj)
+            elif isinstance(obj, Bonus):
+                if pg.Rect.colliderect(self.paddle.bounds, obj.bounds):
+                    self.bonus_action(obj)
+
+    def create_smallBall(self, x, y):
+        bonus = SmallBall(x, y, c.bonus_width, c.bonus_height, c.bonus_speed)
+        return bonus
+
+    def create_smallPaddle(self, x, y):
+        bonus = SmallPaddle(x, y, c.bonus_width, c.bonus_height, c.bonus_speed)          # тут нужен DRY
+        return bonus
+
+    def create_stickyPaddle(self, x, y):
+        bonus = StickyPaddle(x, y, c.bonus_width, c.bonus_height, c.bonus_speed)
+        return bonus
+
+    def checkBonusInside(self, brick):
+        for row in self.bricks:
+            if brick in row:
+                i = self.bricks.index(row)
+                j = row.index(brick)
+                if self.bonuses[i][j]:
+                    bonus_generate_event = pg.USEREVENT+1
+                    bonus_handle = pg.event.Event(bonus_generate_event)
+                    pg.event.post(bonus_handle)
+                    self.handle_bonus_action(bonus_generate_event, self.bonuses[i][j])
+
+    def BonusGeneration(self, list):
+        def randomBonus(i,j):
+            a = random.randint(1, 3)
+            print(a)
+            if a == 1:
+                cell = self.create_smallBall(list[i][j].centerx, list[i][j].centery)
+                return cell
+            elif a == 2:
+                cell = self.create_smallPaddle(list[i][j].centerx, list[i][j].centery)
+                return cell
+            else:
+                cell = self.create_stickyPaddle(list[i][j].centerx, list[i][j].centery)
+                return cell
+
+        bonus_list = []
+        for i in range(3):
+            buflist = [None] * 12
+            for j in range(c.screen_width//c.brick_width):
+                if isinstance(list[i][j], StrongBrick):
+                    bufrand = random.randint(1, 2)
+                    if bufrand == 2:
+                        buflist[j] = randomBonus(i,j)
+                elif isinstance(list[i][j], MediumBrick):
+                    bufrand = random.randint(1, 5)
+                    if bufrand == 5:
+                        buflist[j] = randomBonus(i, j)
+            bonus_list.append(buflist)
+        return bonus_list
+
+    def generate_bonuses(self):
+        self.bonuses = self.BonusGeneration(self.bricks)
+        print(self.bonuses)
 
     def setscore(self):
         self.score.text = f"SCORE: {self.points}"
@@ -154,6 +221,32 @@ class Breakout(Game):
     def setZeroPos(self):
         if self.ball.state == False:
             self.ball.bounds.centerx = self.paddle.centerx
+
+    def handle_bonus_action(self, myEvent, bonus):
+        for event in pg.event.get():
+            if event.type == myEvent:
+                self.objects.append(bonus)
+
+    def bonus_action(self, obj):
+        if isinstance(obj, SmallBall):
+            self.small_ball_action()
+        elif isinstance(obj, SmallPaddle):
+            self.small_paddle_action()
+        self.objects.remove(obj)
+
+    def small_ball_action(self):
+        self.ball.bounds.width = self.ball.width//2
+        self.ball.bounds.height = self.ball.height//2
+        self.ball.radius = 10
+
+    def small_paddle_action(self):
+        self.paddle.bounds.width = 150
+
+    def sticky_paddle_action(self):
+        stickToPaddle_event = pg.USEREVENT+2
+        handle_stickyPaddle = pg.event.Event(stickToPaddle_event)
+        pg.event.post(handle_stickyPaddle)
+
 
     def update(self):
         self.ball_physics()
@@ -178,7 +271,7 @@ class Breakout(Game):
                 todel = self.objects.index(countLife()[1])
                 self.objects.remove(self.objects[todel])
             else:
-                quit()
+                quit()   # прописать метод проигрыша
 
 
 

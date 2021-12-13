@@ -1,6 +1,7 @@
 import random
 
 import pygame as pg
+import Events as evt
 import sys
 from collections import defaultdict
 
@@ -15,6 +16,7 @@ class Game:
         pg.display.set_caption(caption)
         self.clock = pg.time.Clock()
         self.keydown_handlers = defaultdict(list)
+        self.game_events_handlers = defaultdict(list)
         self.keyup_handlers = defaultdict(list)
 
     def update(self):
@@ -36,6 +38,21 @@ class Game:
             elif event.type == pg.KEYUP:
                 for handler in self.keyup_handlers[event.key]:
                     handler(event.key)
+            elif  event.type == pg.USEREVENT+1:
+                if event.MyOwnType == evt.BONUS_DROP:
+                    print('бонус падает')
+                    for handler in self.game_events_handlers[evt.BONUS_DROP]:
+                        handler(event.value)
+                if event.MyOwnType == evt.SMALL_PADDLE_BONUS:
+                    for handler in self.game_events_handlers[evt.SMALL_PADDLE_BONUS]:
+                        handler()
+                if event.MyOwnType == evt.SMALL_BALL_BONUS:
+                    for handler in self.game_events_handlers[evt.SMALL_BALL_BONUS]:
+                        handler()
+                if event.MyOwnType == evt.STICKY_PADDLE_BONUS:
+                    for handler in self.game_events_handlers[evt.STICKY_PADDLE_BONUS]:
+                        handler()
+
 
     def run(self):
         while not self.game_over:

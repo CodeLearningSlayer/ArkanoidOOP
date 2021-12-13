@@ -47,12 +47,13 @@ class GameObject:
     def draw(self, surface):
         pass
 
-    def move(self):
-        self.bounds.x += self.dx * self.speed
-        self.bounds.y += self.dy * self.speed
+    def move(self, dx, dy):
+        self.bounds.x += dx * self.speed
+        self.bounds.y += dy * self.speed
+
 
     def update(self):
         if self.dx or self.dy:
-            self.move()
+            self.move(self.dx, self.dy)
         else:
             return

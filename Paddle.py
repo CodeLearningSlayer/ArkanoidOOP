@@ -10,6 +10,7 @@ class Paddle(GameObject):
         self.move_left = False
         self.move_right = False
         self.dx = dx
+        self.state = True
         self.dy = 0
 
     def draw(self, surface):
@@ -21,12 +22,17 @@ class Paddle(GameObject):
         if key == pg.K_RIGHT:
             self.move_right = not self.move_right
 
+    def change_state(self):
+        self.state = False
+
+    def downscale(self):
+        self.bounds.width = 150
+
     def update(self):
         if self.move_left and self.left > 0 :
             self.dx = -1
-            self.move()
         elif self.move_right and self.right < c.screen_width:
             self.dx = 1
-            self.move()
         else:
             return
+        self.move(self.dx, 0)

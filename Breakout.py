@@ -2,10 +2,12 @@ import pygame as pg
 import time
 from Game import Game
 from Ball import Ball
+import Events as evt
 from Paddle import Paddle
 from Brick import StrongBrick, MediumBrick, WeakBrick, Brick
 from Text_object import TextObject
 import config as c
+from collections import defaultdict
 from Life import Life
 from Bonus import SmallPaddle, StickyPaddle, SmallBall, Bonus
 import random
@@ -16,7 +18,7 @@ class Breakout(Game):
         super().__init__(caption, width, height, bg_img_filename, frame_rate)
         pg.mixer.music.load(bg_music_filename)
         pg.mixer.music.play(-1, 0, 5000)
-        pg.mixer.music.set_volume(0.1)
+        pg.mixer.music.set_volume(0.0)
         self.gamemode = True
         self.paddle = None
         self.ball = None
@@ -26,6 +28,7 @@ class Breakout(Game):
         self.points = 0
         self.bricks = None
         self.score = None
+        self.create_handlers()
         self.create_objects()
         self.life = None
 
@@ -73,7 +76,6 @@ class Breakout(Game):
                 deltax += 5
             bricks.append(bufmas)
         self.bricks = bricks
-        print(len(self.bricks[0]))
 
     def create_score(self):
         self.score = TextObject(c.score_x, c.score_y, c.score_text, c.score_color,
@@ -93,15 +95,6 @@ class Breakout(Game):
         self.create_bricks()
         self.generate_bonuses()
 
-    def ball_physics(self):
-        if self.ball.centerx < self.ball.radius or c.screen_width - self.ball.centerx <= self.ball.radius:
-            self.ball.dx = -self.ball.dx
-            if self.ball.centerx < self.ball.radius:
-                self.ball.bounds.centerx = self.ball.radius
-            if c.screen_width - self.ball.centerx < self.ball.radius:
-                self.ball.bounds.centerx = c.screen_width - self.ball.radius
-        if self.ball.centery <= self.ball.radius:
-            self.ball.dy = -self.ball.dy
 
     def collisioncheck(self):
 
@@ -113,7 +106,7 @@ class Breakout(Game):
                 self.checkBonusInside(brick)
                 self.objects.remove(brick)
                 self.points += 50
-                self.setscore()
+                self.set_score()
 
         def changeDirection(obj):
             if self.ball.dx > 0:
@@ -132,6 +125,7 @@ class Breakout(Game):
                 self.ball.dx = - self.ball.dx
             elif offsetx > offsety:
                 self.ball.dy = - self.ball.dy
+            self.ball.move(self.ball.dx, self.ball.dy)
 
         def paddleCollision(obj):
             relative_offset = self.ball.right - obj.left
@@ -145,6 +139,7 @@ class Breakout(Game):
                 self.ball.dx = 1 * relative_offset // (end - middle_end) % 3
             elif start < relative_offset < middle_end:
                 self.ball.dx = -0.5 if (middle - self.ball.centerx) < 0 else 0.9
+            self.ball.move(self.ball.dx, self.ball.dy)
 
         for obj in self.objects:
             if isinstance(obj, Brick):
@@ -153,11 +148,19 @@ class Breakout(Game):
                     hit_the_brick(obj)
             elif isinstance(obj, Paddle):
                 if pg.Rect.colliderect(self.ball.bounds, obj.bounds):
-                    changeDirection(obj)
-                    paddleCollision(obj)
+                    if self.paddle.state:
+                        changeDirection(obj)
+                        paddleCollision(obj)
+                    else:
+                        print('yeah')
+                        self.ball.state = False
+
             elif isinstance(obj, Bonus):
                 if pg.Rect.colliderect(self.paddle.bounds, obj.bounds):
-                    self.bonus_action(obj)
+                    evt.generate_bonus_action(obj)
+                    self.objects.remove(obj)
+
+
 
     def create_smallBall(self, x, y):
         bonus = SmallBall(x, y, c.bonus_width, c.bonus_height, c.bonus_speed)
@@ -176,16 +179,13 @@ class Breakout(Game):
             if brick in row:
                 i = self.bricks.index(row)
                 j = row.index(brick)
-                if self.bonuses[i][j]:
-                    bonus_generate_event = pg.USEREVENT+1
-                    bonus_handle = pg.event.Event(bonus_generate_event)
-                    pg.event.post(bonus_handle)
-                    self.handle_bonus_action(bonus_generate_event, self.bonuses[i][j])
+                if self.bonuses[i][j]: #сделать проверку при разбитии кирпича
+                    print("тут есть бонус")
+                    evt.generate_bonus_drop_event(self.bonuses[i][j])
 
     def BonusGeneration(self, list):
         def randomBonus(i,j):
             a = random.randint(1, 3)
-            print(a)
             if a == 1:
                 cell = self.create_smallBall(list[i][j].centerx, list[i][j].centery)
                 return cell
@@ -215,44 +215,45 @@ class Breakout(Game):
         self.bonuses = self.BonusGeneration(self.bricks)
         print(self.bonuses)
 
-    def setscore(self):
+    def set_score(self):
         self.score.text = f"SCORE: {self.points}"
 
-    def setZeroPos(self):
-        if self.ball.state == False:
-            self.ball.bounds.centerx = self.paddle.centerx
+    def set_zero_pos(self):
+        if not self.ball.state and not self.paddle.state:
+            self.ball.set_position(self.ball.right - self.paddle.left,
+                                   self.paddle.top - self.ball.radius)
+            self.paddle.state = True
+            print("offset")
+            return
+        if not self.ball.state and self.paddle.state:
+            self.ball.set_position(self.paddle.centerx, self.paddle.top-self.ball.radius)
+            print("center")
 
-    def handle_bonus_action(self, myEvent, bonus):
-        for event in pg.event.get():
-            if event.type == myEvent:
-                self.objects.append(bonus)
 
-    def bonus_action(self, obj):
-        if isinstance(obj, SmallBall):
-            self.small_ball_action()
-        elif isinstance(obj, SmallPaddle):
-            self.small_paddle_action()
-        self.objects.remove(obj)
+    def handle_bonus_action(self, bonus):
+        self.objects.append(bonus)
 
     def small_ball_action(self):
-        self.ball.bounds.width = self.ball.width//2
-        self.ball.bounds.height = self.ball.height//2
-        self.ball.radius = 10
+        self.ball.downscale()
+
+    def create_handlers(self):
+        self.game_events_handlers[evt.BONUS_DROP].append(self.handle_bonus_action)
+        self.game_events_handlers[evt.SMALL_BALL_BONUS].append(self.small_ball_action)
+        self.game_events_handlers[evt.SMALL_PADDLE_BONUS].append(self.small_paddle_action)
+        self.game_events_handlers[evt.STICKY_PADDLE_BONUS].append(self.sticky_paddle_action)
 
     def small_paddle_action(self):
-        self.paddle.bounds.width = 150
+        self.paddle.downscale()
 
     def sticky_paddle_action(self):
-        stickToPaddle_event = pg.USEREVENT+2
-        handle_stickyPaddle = pg.event.Event(stickToPaddle_event)
-        pg.event.post(handle_stickyPaddle)
-
+        print('Работаю')
+        self.paddle.change_state()
 
     def update(self):
-        self.ball_physics()
         self.collisioncheck()
         self.loose()
-        self.setZeroPos()
+        self.set_zero_pos()
+
         super().update()
 
     def loose(self):
@@ -267,7 +268,6 @@ class Breakout(Game):
             if countLife()[0] > 0:
                 self.objects.remove(self.ball)
                 self.create_ball()
-                print(countLife()[1])
                 todel = self.objects.index(countLife()[1])
                 self.objects.remove(self.objects[todel])
             else:

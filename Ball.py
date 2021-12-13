@@ -21,20 +21,30 @@ class Ball(GameObject):
         if key == pg.K_SPACE:
             self.state = True
 
-    # def update(self):
-    #     self.physics()
-    #     print(self.state)
-    #     if self.state:
-    #         self.bounds.move(self.dx, self.dy)
 
     def physics(self):
         if self.centerx < self.radius or c.screen_width - self.centerx <= self.radius:
             self.dx = -self.dx
             if self.centerx < self.radius:
                 self.bounds.centerx = self.radius
+            if c.screen_width - self.centerx < self.radius:
+                self.bounds.centerx = c.screen_width - self.radius
         if self.centery <= self.radius:
             self.dy = -self.dy
+        self.move(self.dx, self.dy)
+
+    def downscale(self):
+        self.bounds.width = self.bounds.width // 2
+        self.bounds.height = self.bounds.height // 2
+        self.radius = 10
+
+    def set_position(self, *coords):
+        self.state = False
+        self.bounds.centerx = coords[0]
+        self.bounds.centery = coords[1]
+
 
     def update(self):
         if self.state:
+            self.physics()
             super().update()

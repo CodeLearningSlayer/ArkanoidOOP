@@ -2,6 +2,7 @@ from Game_Object import GameObject
 import pygame as pg
 import config as c
 
+
 class Paddle(GameObject):
     def __init__(self, x, y, w, h, color, speed, dx=0):
         super().__init__(x, y, w, h)
@@ -23,7 +24,14 @@ class Paddle(GameObject):
             self.move_right = not self.move_right
 
     def change_state(self):
-        self.state = False
+        self.state = not self.state
+        self.change_color()
+
+    def change_color(self):
+        if not self.state:
+            self.color = c.sticky_paddle_color
+        else:
+            self.color = c.paddle_color
 
     def downscale(self):
         self.bounds.width = 150

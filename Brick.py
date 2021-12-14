@@ -1,12 +1,14 @@
 from Game_Object import GameObject
 import pygame as pg
-from config import RED, GREEN, LIGHT_BLUE
+from config import RED, GREEN, LIGHT_BLUE, path
 
 
 class Brick(GameObject):
     def __init__(self, x, y, w, h, color):
         super().__init__(x, y, w, h)
         self.color = color
+        self.hit_sound = pg.mixer.Sound(path)
+        self.hit_sound.set_volume(0.1)
 
     def draw(self, surface):
         pg.draw.rect(surface, self.color, self.bounds)
@@ -18,6 +20,10 @@ class Brick(GameObject):
             self.color = GREEN
         elif self.hits == 3:
             self.color = RED
+
+    def hit(self):
+        self.hit_sound.play()
+
 
 class StrongBrick(Brick):
     color = RED

@@ -350,7 +350,7 @@ while gamemode:
     for i in range(3):
         for j in range(1024 // 80):
             if len(life) > 0:
-                life[j % len(life)].draw(life[j % len(life)].id.width * (j%len(life)))
+                life[j % len(life)].draw(life[j % len(life)].id.width * (j % len(life)))
             if isinstance(bricks[i][j], Brick):
                 bricks[i][j].draw()
                 bricks[i][j].setcolor()

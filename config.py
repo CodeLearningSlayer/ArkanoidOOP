@@ -17,6 +17,7 @@ paddle_width = 200
 paddle_height = 25
 paddle_color = pg.Color('darkorange')
 paddle_speed = 10
+sticky_paddle_color = pg.Color('aquamarine1')
 
 ball_radius = 13
 ball_side = int(ball_radius * sqrt(2))
@@ -47,3 +48,13 @@ small_paddle_rect = small_paddle_img.get_rect()
 bonus_width = 40
 bonus_height = 40
 bonus_speed = 3
+
+sourceFileDir = os.path.dirname(os.path.abspath(__file__))
+path = os.path.join(sourceFileDir, 'sounds/hit.wav')
+
+winner_text_x = screen_width//2 - 100
+winner_text_y = screen_height//2 - 200
+winner_text_text = "YOU WIN!"
+winner_text_font_size = 100
+winner_text_font = score_font_filename
+winner_text_font_color = (220, 20, 60)

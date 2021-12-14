@@ -17,6 +17,9 @@ class Ball(GameObject):
     def draw(self, surface):
         pg.draw.circle(surface, self.color, self.center, self.radius)
 
+    def change_state(self):
+        self.state = not self.state
+
     def handle(self, key):
         if key == pg.K_SPACE:
             self.state = True

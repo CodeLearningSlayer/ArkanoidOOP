@@ -5,9 +5,11 @@ SMALL_PADDLE_BONUS = 1
 SMALL_BALL_BONUS = 2
 STICKY_PADDLE_BONUS = 3
 
+
 def generate_bonus_drop_event(bonus):
     bonus_drop_event = pg.event.Event(pg.USEREVENT+1, MyOwnType=BONUS_DROP, value=bonus)
     pg.event.post(bonus_drop_event)
+
 
 def generate_bonus_action(bonus):
     if isinstance(bonus, SmallPaddle):

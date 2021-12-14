@@ -1,13 +1,12 @@
 import pygame as pg
-import time
 from Game import Game
 from Ball import Ball
+import time
 import Events as evt
 from Paddle import Paddle
 from Brick import StrongBrick, MediumBrick, WeakBrick, Brick
 from Text_object import TextObject
 import config as c
-from collections import defaultdict
 from Life import Life
 from Bonus import SmallPaddle, StickyPaddle, SmallBall, Bonus
 import random
@@ -26,8 +25,11 @@ class Breakout(Game):
         self.bonuses = None
         self.height = height
         self.points = 0
+        self.count_hit = 0
         self.bricks = None
+        self.obj_offset = 0
         self.score = None
+        self.winner_text = None
         self.create_handlers()
         self.create_objects()
         self.life = None
@@ -94,6 +96,11 @@ class Breakout(Game):
         self.create_ball()
         self.create_bricks()
         self.generate_bonuses()
+        self.create_winner_text()
+
+    def create_winner_text(self):
+        self.winner_text = TextObject(c.winner_text_x, c.winner_text_y, c.winner_text_text, c.winner_text_font_color,
+                                      c.winner_text_font, c.winner_text_font_size)
 
 
     def collisioncheck(self):
@@ -107,6 +114,8 @@ class Breakout(Game):
                 self.objects.remove(brick)
                 self.points += 50
                 self.set_score()
+            brick.hit()
+
 
         def changeDirection(obj):
             if self.ball.dx > 0:
@@ -146,14 +155,19 @@ class Breakout(Game):
                 if pg.Rect.colliderect(self.ball.bounds, obj.bounds):
                     changeDirection(obj)
                     hit_the_brick(obj)
+
             elif isinstance(obj, Paddle):
                 if pg.Rect.colliderect(self.ball.bounds, obj.bounds):
-                    if self.paddle.state:
+                    if self.paddle.state or pg.key.get_pressed()[pg.K_SPACE]:
+                        if pg.key.get_pressed()[pg.K_SPACE]:
+                            self.count_hit += 1
+                            if not self.check_counter(self.count_hit):
+                                self.paddle.change_state()
                         changeDirection(obj)
                         paddleCollision(obj)
                     else:
                         print('yeah')
-                        self.ball.state = False
+                        self.get_offset()
 
             elif isinstance(obj, Bonus):
                 if pg.Rect.colliderect(self.paddle.bounds, obj.bounds):
@@ -179,12 +193,12 @@ class Breakout(Game):
             if brick in row:
                 i = self.bricks.index(row)
                 j = row.index(brick)
-                if self.bonuses[i][j]: #сделать проверку при разбитии кирпича
+                if self.bonuses[i][j]:  # сделать проверку при разбитии кирпича
                     print("тут есть бонус")
                     evt.generate_bonus_drop_event(self.bonuses[i][j])
 
     def BonusGeneration(self, list):
-        def randomBonus(i,j):
+        def randomBonus(i, j):
             a = random.randint(1, 3)
             if a == 1:
                 cell = self.create_smallBall(list[i][j].centerx, list[i][j].centery)
@@ -203,7 +217,7 @@ class Breakout(Game):
                 if isinstance(list[i][j], StrongBrick):
                     bufrand = random.randint(1, 2)
                     if bufrand == 2:
-                        buflist[j] = randomBonus(i,j)
+                        buflist[j] = randomBonus(i, j)
                 elif isinstance(list[i][j], MediumBrick):
                     bufrand = random.randint(1, 5)
                     if bufrand == 5:
@@ -218,17 +232,25 @@ class Breakout(Game):
     def set_score(self):
         self.score.text = f"SCORE: {self.points}"
 
+    def get_offset(self):
+        if not self.paddle.state:
+            self.ball.state = False
+            self.obj_offset = self.ball.right-self.paddle.left
+
     def set_zero_pos(self):
         if not self.ball.state and not self.paddle.state:
-            self.ball.set_position(self.ball.right - self.paddle.left,
+            self.ball.set_position(self.obj_offset+self.paddle.left,
                                    self.paddle.top - self.ball.radius)
-            self.paddle.state = True
-            print("offset")
             return
         if not self.ball.state and self.paddle.state:
             self.ball.set_position(self.paddle.centerx, self.paddle.top-self.ball.radius)
-            print("center")
 
+    @staticmethod
+    def check_counter(value):
+        if value % 5 == 0:
+            return False
+        else:
+            return True
 
     def handle_bonus_action(self, bonus):
         self.objects.append(bonus)
@@ -253,12 +275,20 @@ class Breakout(Game):
         self.collisioncheck()
         self.loose()
         self.set_zero_pos()
-
+        if self.win():
+            self.objects.remove(self.paddle)
+            self.objects.remove(self.ball)
+            self.win_message()
+            self.game_over = True
+            time.sleep(3)
+            return
         super().update()
+
 
     def loose(self):
         def countLife():
-            lifeCount=0
+            lifeCount = 0
+            life = 0
             for i in self.objects:
                 if isinstance(i, Life):
                     lifeCount += 1
@@ -270,10 +300,21 @@ class Breakout(Game):
                 self.create_ball()
                 todel = self.objects.index(countLife()[1])
                 self.objects.remove(self.objects[todel])
+                if not self.paddle.state:
+                    self.paddle.change_state()
             else:
                 quit()   # прописать метод проигрыша
 
+    def win(self):
+        for obj in self.objects:
+            if isinstance(obj, Brick):
+                return False
+        return True
 
+    def win_message(self):
+        self.objects.append(self.winner_text)
+        self.winner_text.draw(self.surface)
+        pg.display.update()
 
 if __name__ == '__main__':
     game = Breakout(c.game_caption, c.screen_width, c.screen_height,

@@ -18,5 +18,8 @@ class TextObject:
         text_surface = self.font.render(self.text, True, self.color)
         return text_surface, text_surface.get_rect()
 
+    def change_text(self, value):
+        self.text = value
+
     def update(self):
         pass

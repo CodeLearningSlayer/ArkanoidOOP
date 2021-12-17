@@ -1,13 +1,13 @@
 from Game_Object import GameObject
 import pygame as pg
-from config import RED, GREEN, LIGHT_BLUE, path
+from config import RED, GREEN, LIGHT_BLUE, path_hit
 
 
 class Brick(GameObject):
     def __init__(self, x, y, w, h, color):
         super().__init__(x, y, w, h)
         self.color = color
-        self.hit_sound = pg.mixer.Sound(path)
+        self.hit_sound = pg.mixer.Sound(path_hit)
         self.hit_sound.set_volume(0.1)
 
     def draw(self, surface):

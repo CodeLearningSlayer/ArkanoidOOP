@@ -50,11 +50,21 @@ bonus_height = 40
 bonus_speed = 3
 
 sourceFileDir = os.path.dirname(os.path.abspath(__file__))
-path = os.path.join(sourceFileDir, 'sounds/hit.wav')
+path_hit = os.path.join(sourceFileDir, 'sounds/hit.wav')
 
-winner_text_x = screen_width//2 - 100
+winner_text_x = screen_width//2 - 300
 winner_text_y = screen_height//2 - 200
 winner_text_text = "YOU WIN!"
 winner_text_font_size = 100
 winner_text_font = score_font_filename
-winner_text_font_color = (220, 20, 60)
+winner_text_font_color = (255, 215, 0)
+
+lost_text_x = winner_text_x - 50
+lost_text_y = winner_text_y
+lost_text_text = "GAME OVER"
+lost_text_font_color = (220, 20, 60)
+lost_text_font = score_font_filename
+lost_text_font_size = 100
+
+path_win = os.path.join(sourceFileDir, 'sounds/win.mp3')
+path_loose = os.path.join(sourceFileDir, 'sounds/loose.mp3')

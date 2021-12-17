@@ -3,6 +3,7 @@ import random
 import pygame as pg
 import Events as evt
 import sys
+from config import path_win, path_loose
 from collections import defaultdict
 
 class Game:
@@ -15,6 +16,10 @@ class Game:
         self.surface = pg.display.set_mode((width, height))
         pg.display.set_caption(caption)
         self.clock = pg.time.Clock()
+        self.loose_music = pg.mixer.Sound(path_loose)
+        self.loose_music.set_volume(0.1)
+        self.win_music = pg.mixer.Sound(path_win)
+        self.win_music.set_volume(0.1)
         self.keydown_handlers = defaultdict(list)
         self.game_events_handlers = defaultdict(list)
         self.keyup_handlers = defaultdict(list)
@@ -53,6 +58,11 @@ class Game:
                     for handler in self.game_events_handlers[evt.STICKY_PADDLE_BONUS]:
                         handler()
 
+    def loose_sound(self):
+        self.loose_music.play()
+
+    def win_sound(self):
+        self.win_music.play()
 
     def run(self):
         while not self.game_over:

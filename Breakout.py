@@ -30,6 +30,7 @@ class Breakout(Game):
         self.obj_offset = 0
         self.score = None
         self.winner_text = None
+        self.lost_text = None
         self.create_handlers()
         self.create_objects()
         self.life = None
@@ -97,11 +98,15 @@ class Breakout(Game):
         self.create_bricks()
         self.generate_bonuses()
         self.create_winner_text()
+        self.create_lost_text()
 
     def create_winner_text(self):
         self.winner_text = TextObject(c.winner_text_x, c.winner_text_y, c.winner_text_text, c.winner_text_font_color,
                                       c.winner_text_font, c.winner_text_font_size)
 
+    def create_lost_text(self):
+        self.lost_text = TextObject(c.lost_text_x, c.lost_text_y, c.lost_text_text, c.lost_text_font_color,
+                                    c.lost_text_font, c.lost_text_font_size)
 
     def collisioncheck(self):
 
@@ -174,8 +179,6 @@ class Breakout(Game):
                     evt.generate_bonus_action(obj)
                     self.objects.remove(obj)
 
-
-
     def create_smallBall(self, x, y):
         bonus = SmallBall(x, y, c.bonus_width, c.bonus_height, c.bonus_speed)
         return bonus
@@ -230,7 +233,7 @@ class Breakout(Game):
         print(self.bonuses)
 
     def set_score(self):
-        self.score.text = f"SCORE: {self.points}"
+        self.score.change_text(f"SCORE: {self.points}")
 
     def get_offset(self):
         if not self.paddle.state:
@@ -276,12 +279,13 @@ class Breakout(Game):
         self.loose()
         self.set_zero_pos()
         if self.win():
+            self.win_sound()
             self.objects.remove(self.paddle)
             self.objects.remove(self.ball)
-            self.win_message()
+            self.message(self.winner_text)
             self.game_over = True
             time.sleep(3)
-            return
+            quit()
         super().update()
 
 
@@ -303,6 +307,12 @@ class Breakout(Game):
                 if not self.paddle.state:
                     self.paddle.change_state()
             else:
+                self.loose_sound()
+                self.objects.remove(self.paddle)
+                self.objects.remove(self.ball)
+                self.message(self.lost_text)
+                self.game_over = True
+                time.sleep(3)
                 quit()   # прописать метод проигрыша
 
     def win(self):
@@ -311,10 +321,11 @@ class Breakout(Game):
                 return False
         return True
 
-    def win_message(self):
-        self.objects.append(self.winner_text)
-        self.winner_text.draw(self.surface)
+    def message(self, obj):
+        self.objects.append(obj)
+        obj.draw(self.surface)
         pg.display.update()
+
 
 if __name__ == '__main__':
     game = Breakout(c.game_caption, c.screen_width, c.screen_height,

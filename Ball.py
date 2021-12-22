@@ -24,7 +24,6 @@ class Ball(GameObject):
         if key == pg.K_SPACE:
             self.state = True
 
-
     def physics(self):
         if self.centerx < self.radius or c.screen_width - self.centerx <= self.radius:
             self.dx = -self.dx

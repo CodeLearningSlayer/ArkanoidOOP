@@ -17,7 +17,7 @@ class Breakout(Game):
         super().__init__(caption, width, height, bg_img_filename, frame_rate)
         pg.mixer.music.load(bg_music_filename)
         pg.mixer.music.play(-1, 0, 5000)
-        pg.mixer.music.set_volume(0.0)
+        pg.mixer.music.set_volume(0.1)
         self.gamemode = True
         self.paddle = None
         self.ball = None
@@ -139,7 +139,9 @@ class Breakout(Game):
                 self.ball.dx = - self.ball.dx
             elif offsetx > offsety:
                 self.ball.dy = - self.ball.dy
-            self.ball.move(self.ball.dx, self.ball.dy)
+            dx = self.ball.dx
+            dy = self.ball.dy
+            self.ball.move(dx, dy)
 
         def paddleCollision(obj):
             relative_offset = self.ball.right - obj.left
@@ -153,7 +155,9 @@ class Breakout(Game):
                 self.ball.dx = 1 * relative_offset // (end - middle_end) % 3
             elif start < relative_offset < middle_end:
                 self.ball.dx = -0.5 if (middle - self.ball.centerx) < 0 else 0.9
-            self.ball.move(self.ball.dx, self.ball.dy)
+            dx = self.ball.dx
+            dy = self.ball.dy
+            self.ball.move(dx, dy)
 
         for obj in self.objects:
             if isinstance(obj, Brick):
@@ -177,6 +181,7 @@ class Breakout(Game):
             elif isinstance(obj, Bonus):
                 if pg.Rect.colliderect(self.paddle.bounds, obj.bounds):
                     evt.generate_bonus_action(obj)
+                    obj.sound()
                     self.objects.remove(obj)
 
     def create_smallBall(self, x, y):

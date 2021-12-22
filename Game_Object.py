@@ -51,7 +51,6 @@ class GameObject:
         self.bounds.x += dx * self.speed
         self.bounds.y += dy * self.speed
 
-
     def update(self):
         if self.dx or self.dy:
             self.move(self.dx, self.dy)

@@ -68,3 +68,4 @@ lost_text_font_size = 100
 
 path_win = os.path.join(sourceFileDir, 'sounds/win.mp3')
 path_loose = os.path.join(sourceFileDir, 'sounds/loose.mp3')
+path_bonus = os.path.join(sourceFileDir, 'sounds/bonus.mp3')
